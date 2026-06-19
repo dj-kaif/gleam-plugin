@@ -107,13 +107,14 @@ const FILE_ICON_STYLE_ID = 'gleam-plugin-file-icon';
  * specificity/order differences with Acode's own stylesheet.
  */
 function registerGleamFileIcon(baseUrl) {
-  if (document.getElementById(FILE_ICON_STYLE_ID)) return;
+  const existing = document.getElementById(FILE_ICON_STYLE_ID);
+  if (existing) existing.remove();
 
   const style = document.createElement('style');
   style.id = FILE_ICON_STYLE_ID;
   style.textContent = `
     .file.file_type_gleam {
-      background-image: url("${baseUrl}icon.png") !important;
+      background-image: url("${baseUrl}file-icon.png?v=${plugin.version}") !important;
       background-size: contain !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
