@@ -6,44 +6,49 @@ const iconFile = path.join(__dirname, 'icon.png');
 const fileIconFile = path.join(__dirname, 'file-icon.png');
 const pluginJSON = path.join(__dirname, 'plugin.json');
 const distFolder = path.join(__dirname, 'dist');
+
+if (!fs.existsSync(pluginJSON)) {
+  console.error('Error: plugin.json not found.');
+  process.exit(1);
+}
+
 const json = JSON.parse(fs.readFileSync(pluginJSON, 'utf8'));
 let readmeDotMd;
 let changelogDotMd;
 
-if (!json.readme) {
-  readmeDotMd = path.join(__dirname, 'readme.md');
-  if (!fs.existsSync(readmeDotMd)) {
-    readmeDotMd = path.join(__dirname, 'README.md');
-  }
+// 1. Fixed Readme Logic: Use the value from plugin.json if it exists
+const readmeTarget = typeof json.readme === 'string' ? json.readme : 'readme.md';
+readmeDotMd = path.join(__dirname, readmeTarget);
+if (!fs.existsSync(readmeDotMd)) {
+  readmeDotMd = path.join(__dirname, 'README.md'); // Fallback case check
 }
 
-
-if (!json.changelogs) {
-  if (!fs.existsSync(changelogDotMd)) {
-    changelogDotMd = path.join(__dirname, 'CHANGELOG.md');
-  }
-
-  if (!fs.existsSync(changelogDotMd)) {
-    changelogDotMd = path.join(__dirname, 'changelog.md');
-  }
+// 2. Fixed Changelog Logic: Use the value from plugin.json if it exists
+const changelogTarget = typeof json.changelogs === 'string' ? json.changelogs : 'changelog.md';
+changelogDotMd = path.join(__dirname, changelogTarget);
+if (!fs.existsSync(changelogDotMd)) {
+  changelogDotMd = path.join(__dirname, 'CHANGELOG.md'); // Fallback case check
 }
-
-// create zip file of dist folder
 
 const zip = new jszip();
 
-zip.file('icon.png', fs.readFileSync(iconFile));
-zip.file('file-icon.png', fs.readFileSync(fileIconFile));
+// Safely add root assets if they exist
+if (fs.existsSync(iconFile)) zip.file('icon.png', fs.readFileSync(iconFile));
+if (fs.existsSync(fileIconFile)) zip.file('file-icon.png', fs.readFileSync(fileIconFile));
 zip.file('plugin.json', fs.readFileSync(pluginJSON));
 
-if (readmeDotMd) {
+// Only attempt to read markdown files if they actually exist on disk
+if (readmeDotMd && fs.existsSync(readmeDotMd)) {
   zip.file("readme.md", fs.readFileSync(readmeDotMd));
 }
-if (changelogDotMd) {
+if (changelogDotMd && fs.existsSync(changelogDotMd)) {
   zip.file("changelog.md", fs.readFileSync(changelogDotMd));
 }
 
-loadFile('', distFolder);
+// Pack the dist folder contents
+if (fs.existsSync(distFolder)) {
+  loadFile('', distFolder);
+}
 
 zip
   .generateNodeStream({ type: 'nodebuffer', streamFiles: true })
@@ -52,20 +57,25 @@ zip
     console.log('Plugin plugin.zip written.');
   });
 
+// 3. Fixed recursive folder packager
 function loadFile(root, folder) {
   const distFiles = fs.readdirSync(folder);
+  
   distFiles.forEach((file) => {
-
-    const stat = fs.statSync(path.join(folder, file));
+    const localPath = path.join(folder, file);
+    const stat = fs.statSync(localPath);
+    
+    // Crucial: Forces forward slashes ('/') for internal ZIP paths across all platforms
+    const zipPath = root ? `${root}/${file}` : file;
 
     if (stat.isDirectory()) {
-      zip.folder(file);
-      loadFile(path.join(root, file), path.join(folder, file));
+      // Recursively step into directories (JSZip auto-creates parent folders via file paths)
+      loadFile(zipPath, localPath);
       return;
     }
 
     if (!/LICENSE.txt/.test(file)) {
-      zip.file(path.join(root, file), fs.readFileSync(path.join(folder, file)));
+      zip.file(zipPath, fs.readFileSync(localPath));
     }
   });
 }
