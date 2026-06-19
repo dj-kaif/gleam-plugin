@@ -1,0 +1,23 @@
+{
+  "name": "acode-plugin-gleam",
+  "version": "1.0.0",
+  "description": "Gleam language support for Acode",
+  "main": "src/main.js",
+  "repository": "https://github.com/dj-kaif/gleam-plugin.git",
+  "author": "DJ KAIF",
+  "license": "MIT",
+  "dependencies": {
+    "acode-plugin-types": "^1.11.7-patch.2",
+    "html-tag-js": "^2.4.15",
+    "@codemirror/language": "^6.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.8",
+    "jszip": "^3.10.1"
+  },
+  "scripts": {
+    "dev": "node esbuild.config.mjs --serve",
+    "build": "node esbuild.config.mjs"
+  },
+  "browserslist": "cover 100%,not android < 5"
+}
